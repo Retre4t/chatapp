@@ -5,9 +5,23 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel = "stylesheet" href="style.css">
+
 	<script>
-		var name = prompt("Indtast et brugernavn");
+		document.addEventListener("DOMContentLoaded", (event) => {
+			fetch("http://localhost:3000/username")
+				.then((res) => res.json())
+				.then((data) => {
+					console.log("modtaget data:", data.username)
+					window.alert('Velkommen:', data.username);
+					})
+				
+					.catch(() => {
+					window.alert("Der skete en fejl");
+				})
+			});
+
 	</script>
+
 </head>
 <body>
     
@@ -30,7 +44,8 @@
     		socket.emit('joining msg', name);
 
     		$('form').submit(function(e) {
-    			e.preventDefault();            // will prevent page reloading
+				//Sørger for at siden ikke reloader
+    			e.preventDefault();            
       			socket.emit('chat message', (name + ':  ' + $('#m').val()));
                         $('#messages').append($('<li id="list">').text('You:  ' + $('#m').val()));
       			$('#m').val('');
