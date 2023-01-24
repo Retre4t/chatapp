@@ -53,6 +53,10 @@ app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/forside.html');
 });
 
+app.get('/style.css', (req, res) => {
+  res.sendFile(__dirname + '/public/style.css');
+});
+
 app.get('/index', (req, res) => {
   res.sendFile(__dirname + '/public/Index.html');
 });
@@ -62,47 +66,49 @@ app.get('/login', (req, res) => {
   res.sendFile(__dirname + '/public/login.html');
 });
 
-app.post('/login', (req, res) => {
-    const email = req.body.email;
-    const password = req.body.password;
+app.post('/login', async (req, res) => {
+  const email = req.body.email;
+  const password = req.body.password;
 
     // Connect to the existing database
     const db = new sqlite3.Database('users.db');
 
-    // SELECT statement to check if a user exists
-    db.get(`SELECT COUNT(*) as count FROM users WHERE email = '${email}' AND password = '${password}'`, (err, row) => {
+    // SELECT statement to check if the email already exists
+    db.get(`SELECT password, username FROM users WHERE email = '${email}'`, (err, row) => {
         if (err) {
             throw err;
         }
-        if (row.count > 0) {
+        if (!row) {
+            res.send("Incorrect email or password");
+            return;
+        } else {
+            // Compare the password with the hashed password in the database
+            bcrypt.compare(password, row.password)
+            .then ((result) => {
+            if (result) {
+              //sætter session cookie op 
+              req.session.id = req.body.email;
+              req.session.loggedIn = true;
+              req.session.username = row.username
+              console.dir(row.username)
 
-            //sætter session cookie op 
-            req.session.id = req.body.email;
-            req.session.loggedIn = true;
-
-            //finder brugernavnet på brugeren som logger ind. Dette bruges i chatten
-            let users = db.all("SELECT email, username FROM users", function(err, rows) {
-              rows.forEach(function (row) {
-                  if(row.email == email){
-                    //Tilføjer brugernavnet til session cookien
-                      req.session.username = row.username
-                      console.log(req.session.username)
-                  }
-                  //console.log(row.email, row.username);
-          
-              })
-          });	
             //sender klienten videre
             res.redirect('/index')
             
-        } else {
-            //afviser klienten grundet forkert kodeord eller email
-            res.send("Incorrect email or password");
+            }if (err) {
+                  throw err;
+            }else {
+                  //afviser klienten grundet forkert kodeord eller email
+                  res.send("Incorrect password");
+                  return;
+                }
+            });
         }
-    });
     // Close the database connection
     db.close();
+  });
 });
+
 
 //opretter en ny bruger i databasen og tjekker heri også om brugeren allerede eksisterer
 app.get('/opretbruger', (req, res) => {
@@ -114,41 +120,45 @@ app.post('/opretbruger', (req, res) => {
   const password = req.body.password;
   const username = req.body.username;
 
-  // Connect to the existing database
-  const db = new sqlite3.Database('users.db');
-
-  // SELECT statement to check if the email already exists
-  db.get(`SELECT COUNT(*) as count FROM users WHERE email = '${email}'`, (err, row) => {
+  // Hash the password
+  bcrypt.hash(password, saltRounds, (err, hash) => {
       if (err) {
           throw err;
       }
-      if (row.count > 0) {
-          res.send(`The email ${email} already exists`);
-      } else {
-          // INSERT statement to add new user
-          db.run(`INSERT INTO users (email, password, username) VALUES ('${email}', '${password}', '${username}')`, (err) => {
-              if (err) {
-                  throw err;
-              }
+      // Connect to the existing database
+      const db = new sqlite3.Database('users.db');
 
-              req.session.username = req.body.username;
-              req.session.email = req.body.email;
-              req.session.loggedIn = true;
+      // SELECT statement to check if the email already exists
+      db.get(`SELECT COUNT(*) as count FROM users WHERE email = '${email}'`, (err, row) => {
+          if (err) {
+              throw err;
+          }
+          //Tjekker om querien returnerer noget data på baggrund af den indtastede email
+          if (row.count > 0) {
+              res.send(`The email ${email} already exists`);
+          } else {
+              // INSERT statement to add new user
+              db.run(`INSERT INTO users (email, password, username) VALUES ('${email}', '${hash}', '${username}')`, (err) => {
+                  if (err) {
+                      throw err;
+                  }
 
-              res.sendFile(__dirname + '/public/index.html');
-            });
-      }
+                  req.session.username = req.body.username;
+                  req.session.email = req.body.email;
+                  req.session.loggedIn = true;
+    
+                  res.sendFile(__dirname + '/public/index.html');
+                  console.dir(`The user ${username} has been added`);
+              });
+          }
+      });
+      // Close the database connection
+      db.close();
   });
-
-  // Close the database connection
-  db.close();
 });
 
 
-
-//Finder brugerens brugernavn
-
-var name = "Anton"
+var name
 
 io.on('connection', (socket) => {
   console.log('new user connected');
@@ -172,6 +182,6 @@ io.on('connection', (socket) => {
 
 
 
-server.listen(3000, () => {
-  console.log('Server listening on PORT: 3000');
+server.listen(3030, () => {
+  console.log('Server listening on PORT: 3030');
 });

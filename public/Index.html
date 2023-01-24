@@ -6,22 +6,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<link rel = "stylesheet" href="style.css">
 
-	<script>
-		document.addEventListener("DOMContentLoaded", (event) => {
-			fetch("http://localhost:3000/username")
-				.then((res) => res.json())
-				.then((data) => {
-					console.log("modtaget data:", data.username)
-					window.alert('Velkommen:', data.username);
-					})
-				
-					.catch(() => {
-					window.alert("Der skete en fejl");
-				})
-			});
-
-	</script>
-
 </head>
 <body>
     
@@ -39,8 +23,28 @@
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
 
     <script>
-    		var socket = io();
 
+		document.addEventListener("DOMContentLoaded", (event) => {
+			fetch("http://localhost:3030/username")
+			.then((res) => {
+				if(res.ok)
+					return res.json();
+				else
+					throw new Error('Network response was not ok');
+				})
+			.then((data) => {
+				console.log("modtaget data:", data.username);
+				window.alert(`Velkommen: ${data.username}`);
+				name = data.username;
+				})
+			.catch((error) => {
+				console.log(error);
+				window.alert("Der skete en fejl");
+			});
+		});
+			var name = name
+    		var socket = io();
+		
     		socket.emit('joining msg', name);
 
     		$('form').submit(function(e) {
@@ -54,6 +58,7 @@
     		socket.on('chat message', function(msg){
       			$('#messages').append($('<li>').text(msg));
     		});
+
     </script>
 
 </body>
