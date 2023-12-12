@@ -1,8 +1,17 @@
 var express = require('express');
-var http = require('http');
+var https = require('https');
+const fs = require('fs');
+const crypto = require('crypto');
+
 
 var app = express();
-var server = http.createServer(app);
+
+const options = {
+  key: fs.readFileSync('private-key.pem'),
+  cert: fs.readFileSync('certificate.pem'),
+};
+
+var server = https.createServer(options, app);
 
 //benytter session cookies 
 const session = require("express-session")
@@ -14,6 +23,7 @@ const bodyParser = require('body-parser');
 app.use(bodyParser.urlencoded({ extended: true }));
 
 //socket moduler
+// socket opererer over https protokolen
 var io = require('socket.io')(server);
 var path = require('path');
 
@@ -157,6 +167,23 @@ app.post('/opretbruger', (req, res) => {
   });
 });
 
+//Enkryptering af beskeder
+const crypto = require('crypto');
+
+function encrypt(text, secret) {
+  const cipher = crypto.createCipher('aes-256-cbc', secret);
+  let encrypted = cipher.update(text, 'utf-8', 'hex');
+  encrypted += cipher.final('hex');
+  return encrypted;
+}
+
+function decrypt(encrypted, secret) {
+  const decipher = crypto.createDecipher('aes-256-cbc', secret);
+  let decrypted = decipher.update(encrypted, 'hex', 'utf-8');
+  decrypted += decipher.final('utf-8');
+  return decrypted;
+}
+
 
 var name
 
@@ -175,6 +202,8 @@ io.on('connection', (socket) => {
     
   });
   socket.on('chat message', (msg) => {
+    //const encryptedMsg = encrypt(msg, sharedKey);
+    //socket.emit('chat message', encryptedMsg);
     //Sender beskeden til alle som er aktive i chatvinduet, udover afsenderen
     socket.broadcast.emit('chat message', msg);         
   });
