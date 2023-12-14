@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", (event) => {
     //tjekker om brugeren er logged in
-  fetch("http://localhost:3030/loggedstatus")
+  fetch("https://localhost:3030/loggedStatus")
     .then((res) => res.json())
     .then((data) => {
       console.log(data);

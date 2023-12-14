@@ -1,15 +1,18 @@
 var express = require('express');
 var https = require('https');
 const fs = require('fs');
-const crypto = require('crypto');
-
+const {encrypt, decrypt} = require("./cryptography.js");
+const Cryptr = require("cryptr");
+const cryptr = new Cryptr(
+  "a2e092a744265fd214d7c2ef079e2f01b6d06319b7b2"
+);
 
 var app = express();
 
 const options = {
   key: fs.readFileSync('private-key.pem'),
   cert: fs.readFileSync('certificate.pem'),
-};
+}
 
 var server = https.createServer(options, app);
 
@@ -21,6 +24,7 @@ const sqlite3 = require('sqlite3').verbose();
 const bodyParser = require('body-parser');
 
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(bodyParser.json());
 
 //socket moduler
 // socket opererer over https protokolen
@@ -32,16 +36,13 @@ const bcrypt = require('bcrypt');
 const saltRounds = 10;
 
 
-//session coockie                                  
+//session cookie                                  
 app.use(session({
 	secret: 'secret',
 	resave: true,
 	saveUninitialized: true
 }));
 
-
-
-//app.use(express.static(path.join(__dirname,'./public')));
 
 //endpoint med loggedin status som bruges i scripts til HTML siderne til at bestemme om brugeren er logged in
 app.get("/loggedStatus", async (req, res) => {
@@ -58,6 +59,36 @@ app.get("/username", async (req, res) => {
   res.json(json);
 });
 
+app.post("/decrypt", (req, res) => {
+  const encryptedMessage = req.body.encryptedMessage;
+  console.log(encryptedMessage.encryptedMessage)
+  // Check if the encrypted message is null or undefined
+  if (encryptedMessage == null) {
+    return res.status(400).json({ error: "Encrypted message cannot be null or undefined" });
+  }
+
+  try {
+    console.log('Decrypting message');
+    const decrypted = cryptr.decrypt(encryptedMessage.encryptedMessage);
+    console.log("Decrypted message:", decrypted);
+    res.json({ decryptedMessage: decrypted });
+  } catch (error) {
+    console.error("Decryption error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/encrypt", (req, res) => {
+  const message = req.body.message;
+  // Check if the message is null or undefined
+  if (message == null) {
+    return res.status(400).json({ error: "Message cannot be null or undefined" });
+  }
+
+  const encrypted = cryptr.encrypt(message);
+  console.log("Encrypted message length: " + encrypted.length);
+  res.json({ encryptedMessage: encrypted });
+});
 
 app.get('/', (req, res) => {
   res.sendFile(__dirname + '/public/forside.html');
@@ -109,7 +140,7 @@ app.post('/login', async (req, res) => {
                   throw err;
             }else {
                   //afviser klienten grundet forkert kodeord eller email
-                  res.send("Incorrect password");
+                  res.send("Incorrect username or password");
                   return;
                 }
             });
@@ -167,50 +198,30 @@ app.post('/opretbruger', (req, res) => {
   });
 });
 
-//Enkryptering af beskeder
-const crypto = require('crypto');
+io.on("connection", (socket) => {
+  console.log("new user connected");
 
-function encrypt(text, secret) {
-  const cipher = crypto.createCipher('aes-256-cbc', secret);
-  let encrypted = cipher.update(text, 'utf-8', 'hex');
-  encrypted += cipher.final('hex');
-  return encrypted;
-}
-
-function decrypt(encrypted, secret) {
-  const decipher = crypto.createDecipher('aes-256-cbc', secret);
-  let decrypted = decipher.update(encrypted, 'hex', 'utf-8');
-  decrypted += decipher.final('utf-8');
-  return decrypted;
-}
-
-
-var name
-
-io.on('connection', (socket) => {
-  console.log('new user connected');
+  let name;
 
   //Giver besked i chatten med brugerens valgte brugernavn når personen kommer in i chatrummet
-  socket.on('joining msg', (name) => {
-  	io.emit('chat message', `---${name} joined the chat---`);
+  socket.on("joining msg", (name) => {
+    io.emit("chat message", `---${name} joined the chat---`);
   });
 
   //Giver besked i chatten når en bruger forlader chat rummet
-  socket.on('disconnect', () => {
-    console.log('user disconnected');
-    io.emit('chat message', `---${name} left the chat---`);
-    
+  socket.on("disconnect", () => {
+    console.log("user disconnected");
+    io.emit("chat message", `---${name} left the chat---`);
   });
-  socket.on('chat message', (msg) => {
-    //const encryptedMsg = encrypt(msg, sharedKey);
-    //socket.emit('chat message', encryptedMsg);
+
+  socket.on("chat message", (msg) => {
     //Sender beskeden til alle som er aktive i chatvinduet, udover afsenderen
-    socket.broadcast.emit('chat message', msg);         
+    console.log('incoming message:', msg)
+    socket.broadcast.emit("incoming chat", msg);
   });
 });
 
 
-
-server.listen(3030, () => {
-  console.log('Server listening on PORT: 3030');
-});
+  server.listen(3030, () => {
+    console.log("Server running on PORT: 3030");
+});  

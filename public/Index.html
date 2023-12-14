@@ -15,51 +15,109 @@
     
     <ul id="messages"></ul>
     
-    <form action="">
+    <form id="chatForm">
       <input id="m" placeholder="Enter your message..." autocomplete="off" required /><button>Send</button>
     </form>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+	<script src="/"></script>
+
 
     <script>
-
+		
 		document.addEventListener("DOMContentLoaded", (event) => {
-			fetch("http://localhost:3030/username")
-			.then((res) => {
-				if(res.ok)
+			fetch("https://localhost:3030/username")
+				.then((res) => {
+					if (!res.ok) {
+						throw new Error(`Network response was not ok (${res.status} ${res.statusText})`);
+					}
 					return res.json();
-				else
-					throw new Error('Network response was not ok');
 				})
-			.then((data) => {
-				console.log("modtaget data:", data.username);
-				window.alert(`Velkommen: ${data.username}`);
-				name = data.username;
+				.then((data) => {
+					if (!data || typeof data.username === 'undefined') {
+						throw new Error('Invalid data received from the server');
+					}
+
+					console.log("Received data:", data.username);
+					window.alert(`Velkommen: ${data.username}`);
+					name = data.username;
 				})
-			.catch((error) => {
-				console.log(error);
-				window.alert("Der skete en fejl");
-			});
+				.catch((error) => {
+					console.error("Fetch error:", error);
+					window.alert("Der skete en fejl");
+				});
 		});
-			var name = name
+
+
+			var name;
     		var socket = io();
 		
-    		socket.emit('joining msg', name);
+    		//socket.emit('joining msg', name);
+			
+			$('#chatForm').submit(function(e) {
+				e.preventDefault();
+				const messageText = $('#m').val();
 
-    		$('form').submit(function(e) {
-				//Sørger for at siden ikke reloader
-    			e.preventDefault();            
-      			socket.emit('chat message', (name + ':  ' + $('#m').val()));
-                        $('#messages').append($('<li id="list">').text('You:  ' + $('#m').val()));
-      			$('#m').val('');
-      			return false;
-    		});
-    		socket.on('chat message', function(msg){
-      			$('#messages').append($('<li>').text(msg));
-    		});
+				// Check if name is defined before making the AJAX request
+				if (typeof name !== 'undefined') {
+					console.log('Sending message for encryption:', messageText);
+
+					// Make an AJAX request to the '/encrypt' endpoint for encryption
+					$.ajax({
+					type: 'POST',
+					url: '/encrypt',
+					contentType: 'application/json',
+					data: JSON.stringify({ message: messageText }),
+					success: function(data) {
+						console.log('Received encrypted message:', data);
+
+						const encryptedMessage = data.encryptedMessage;
+
+						// Emit a 'chat message' event to the server using Socket.IO, including the sender's name and the encrypted message
+						socket.emit('chat message', { name, encryptedMessage });
+
+						// Append a new list item to the unordered list with the id 'messages', displaying the sent message
+						$('#messages').append($('<li id="list">').text('You:  ' + messageText));
+
+						// Clear the input field after sending the message
+						$('#m').val('');
+					},
+					error: function(err) {
+						console.error('Encryption error:', err);
+						// Handle errors accordingly
+					}
+					});
+				} else {
+					console.error('Name is undefined'); // Log an error if name is undefined
+				}
+				return false;
+				});
+
+
+				socket.on('incoming chat', function (msg) {
+					console.dir(msg)
+					// Make an AJAX request to the '/decrypt' endpoint for decryption
+					$.ajax({
+					type: 'POST',
+					url: '/decrypt',
+					contentType: 'application/json',
+					data: JSON.stringify({ encryptedMessage: msg }),
+					success: function (data) {
+						const decryptedMessage = data.decryptedMessage;
+
+						// Append a new list item to the unordered list with the id 'messages', displaying the received and decrypted message
+						$('#messages').append($('<li>').text(decryptedMessage));
+					},
+					error: function (err) {
+						console.error('Decryption error:', err);
+					}
+					});
+				});
+
 
     </script>
 
 </body>
 </html>
+
