@@ -1,11 +1,28 @@
 var express = require('express');
 var https = require('https');
 const fs = require('fs');
-const {encrypt, decrypt} = require("./cryptography.js");
 const Cryptr = require("cryptr");
 const cryptr = new Cryptr(
   "a2e092a744265fd214d7c2ef079e2f01b6d06319b7b2"
 );
+
+var cluster = require("cluster");
+var os = require("os");
+
+if (cluster.isMaster) {
+  // Find antal CPU kerner
+  var cpuCount = os.cpus().length;
+
+  // Lav en worker for hver CPU kerne
+  for (var i = 0; i < cpuCount; i += 1) {
+    cluster.fork();
+    // Lyt efter døde workers og erstat dem
+  cluster.on("exit", function (worker) {
+    console.log("Worker %d died", worker.id);
+    cluster.fork();
+  });
+}}
+
 
 var app = express();
 
