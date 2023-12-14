@@ -25,6 +25,7 @@
     "socket.io": "^4.5.4",
     "sqlite3": "^5.1.6",
     "sqllite": "^1.1.2",
+    "sticky-session": "^1.1.2",
     "store2": "^2.14.2"
   }
 }

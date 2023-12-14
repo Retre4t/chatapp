@@ -12,40 +12,44 @@ const bcrypt = require('bcrypt');
 const path = require('path');
 const bodyParser = require('body-parser');
 const socketIO = require('socket.io');
+const sticky = require('sticky-session');
 
 const cryptr = new Cryptr('a2e092a744265fd214d7c2ef079e2f01b6d06319b7b2', 'aes-256-ctr', 'hex', 16);
 
-if (cluster.isMaster) {
+const app = express();
+
+app.use(express.static(path.join(__dirname, 'public')));
+
+
+const server = https.createServer(
+  {
+    key: fs.readFileSync('private-key.pem'),
+    cert: fs.readFileSync('certificate.pem'),
+  },
+  app
+);
+
+
+//cluster load balancer implementation
+if (!sticky.listen(server, 3030)) {
   // Find the number of CPU cores
   const cpuCount = os.cpus().length;
 
   // Create a worker for each CPU core
   for (let i = 0; i < cpuCount; i += 1) {
-    cluster.fork();
+    require('cluster').fork();
   }
-
   // Replace dead workers
   cluster.on('exit', (worker) => {
     console.log(`Worker ${worker.id} died`);
-    cluster.fork();
+    require('cluster').fork();
   });
 } else {
 
-  const app = express();
-  const server = https.createServer(
-    {
-      key: fs.readFileSync('private-key.pem'),
-      cert: fs.readFileSync('certificate.pem'),
-    },
-    app
-  );
-
-  const session = require("express-session")
+  const io = socketIO(server);
 
   app.use(bodyParser.urlencoded({ extended: true }));
   app.use(bodyParser.json());
-
-  const io = socketIO(server);
   
   //enkrypterings modul
   const bcrypt = require('bcrypt');
@@ -99,15 +103,15 @@ if (cluster.isMaster) {
 
   app.post('/decrypt', (req, res) => {
     const encryptedMessage = req.body.encryptedMessage;
-
     // Check if the encrypted message is null or undefined
-    if (encryptedMessage == null) {
+    if (encryptedMessage.encryptedMessage == null) {
       return res.status(400).json({ error: 'Encrypted message cannot be null or undefined' });
     }
 
     try {
+      console.log('decrypting:', encryptedMessage)
       console.log('Decrypting message');
-      const decrypted = cryptr.decrypt(encryptedMessage);
+      const decrypted = cryptr.decrypt(encryptedMessage.encryptedMessage);
       console.log('Decrypted message:', decrypted);
       res.json({ decryptedMessage: decrypted });
     } catch (error) {
@@ -118,12 +122,10 @@ if (cluster.isMaster) {
 
   app.post('/encrypt', (req, res) => {
     const message = req.body.message;
-
     // Check if the message is null or undefined
     if (message == null) {
       return res.status(400).json({ error: 'Message cannot be null or undefined' });
     }
-
     const encrypted = cryptr.encrypt(message);
     console.log('Encrypted message length: ' + encrypted.length);
     res.json({ encryptedMessage: encrypted });
@@ -254,7 +256,8 @@ app.get("/loggedStatus", async (req, res) => {
   });
 
 
-  server.listen(3030, () => {
-    console.log(`Server running on PORT: 3030, Worker ${cluster.worker.id}`);
+  server.listen(0, 'localhost', () => {
+    // Output the actual port that was assigned
+    console.log(`Server running on PORT: ${server.address().port}, Worker ${cluster.worker.id}`);
   });
 }

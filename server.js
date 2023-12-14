@@ -6,23 +6,6 @@ const cryptr = new Cryptr(
   "a2e092a744265fd214d7c2ef079e2f01b6d06319b7b2"
 );
 
-var cluster = require("cluster");
-var os = require("os");
-
-if (cluster.isMaster) {
-  // Find antal CPU kerner
-  var cpuCount = os.cpus().length;
-
-  // Lav en worker for hver CPU kerne
-  for (var i = 0; i < cpuCount; i += 1) {
-    cluster.fork();
-    // Lyt efter døde workers og erstat dem
-  cluster.on("exit", function (worker) {
-    console.log("Worker %d died", worker.id);
-    cluster.fork();
-  });
-}}
-
 var app = express();
 
 const options = {
@@ -241,3 +224,4 @@ io.on("connection", (socket) => {
   server.listen(3030, () => {
     console.log("Server running on PORT: 3030");
 });  
+
