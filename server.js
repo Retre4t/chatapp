@@ -23,7 +23,6 @@ if (cluster.isMaster) {
   });
 }}
 
-
 var app = express();
 
 const options = {
