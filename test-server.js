@@ -3,9 +3,7 @@ const https = require('https');
 const fs = require('fs');
 const Cryptr = require('cryptr');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const sqlite3 = require('sqlite3').verbose();
-const sharedSession = require('express-socket.io-session');
 const cluster = require('cluster');
 const os = require('os');
 const bcrypt = require('bcrypt');
@@ -18,8 +16,24 @@ const cryptr = new Cryptr('a2e092a744265fd214d7c2ef079e2f01b6d06319b7b2', 'aes-2
 
 const app = express();
 
+app.get('/', (req, res) => {
+  res.sendFile(__dirname + '/public/forside.html'); 
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
+app.get('/style.css', (req, res) => {
+  res.sendFile(__dirname + '/public/style.css');
+});
+
+app.get('/index', (req, res) => {
+  res.sendFile(__dirname + '/public/Index.html');
+});
+
+//tjekker efter korrekte login oplysninger
+app.get('/login', (req, res) => {
+  res.sendFile(__dirname + '/public/login.html');
+});
 
 const server = https.createServer(
   {
@@ -131,22 +145,6 @@ if (!sticky.listen(server, 3030)) {
     res.json({ encryptedMessage: encrypted });
   });
 
-  app.get('/', (req, res) => {
-    res.sendFile(__dirname + '/public/forside.html');
-  });
-  
-  app.get('/style.css', (req, res) => {
-    res.sendFile(__dirname + '/public/style.css');
-  });
-  
-  app.get('/index', (req, res) => {
-    res.sendFile(__dirname + '/public/Index.html');
-  });
-  
-  //tjekker efter korrekte login oplysninger
-  app.get('/login', (req, res) => {
-    res.sendFile(__dirname + '/public/login.html');
-  });
 
   app.post('/login', async (req, res) => {
     const email = req.body.email;

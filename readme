@@ -1,5 +1,5 @@
 1. NPM install for at få alle moduler osv installeret
 Node server.js
-Naviger til: https:localhost:433/index
+Naviger til: https:localhost:3030
 
 Stadigvæk work in progress. Login og signup funktioner virker muligvis ikke, men chat funktionaliteten er der.

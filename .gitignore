@@ -61,6 +61,7 @@ yarn-error.log*
 
 # local env files
 .env*.local
+users.db
 
 # vercel
 .vercel
@@ -231,3 +232,5 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,node,windows,nextjs
+*.json
+node_modules/.DS_Store
