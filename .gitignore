@@ -51,7 +51,7 @@ Temporary Items
 /build
 
 # misc
-*.pem
+
 
 # debug
 npm-debug.log*
