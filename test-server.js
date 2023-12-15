@@ -125,9 +125,10 @@ if (!sticky.listen(server, 3030)) {
     try {
       console.log('decrypting:', encryptedMessage)
       console.log('Decrypting message');
-      const decrypted = cryptr.decrypt(encryptedMessage.encryptedMessage);
-      console.log('Decrypted message:', decrypted);
-      res.json({ decryptedMessage: decrypted });
+      const decryptedMessage = cryptr.decrypt(encryptedMessage.encryptedMessage);
+      const username = encryptedMessage.name
+      console.log('Decrypted message:', decryptedMessage);
+      res.json({ username, decryptedMessage: decryptedMessage });
     } catch (error) {
       console.error('Decryption error:', error);
       res.status(500).json({ error: 'Internal Server Error' });

@@ -10,7 +10,7 @@
 <body>
     
     <div id="intro">
-      <h1>Chat Rum</h1>
+      <h1>Joe & The Juice Chat</h1>
     </div>
     
     <ul id="messages"></ul>
@@ -107,7 +107,7 @@
 						const decryptedMessage = data.decryptedMessage;
 
 						// Append a new list item to the unordered list with the id 'messages', displaying the received and decrypted message
-						$('#messages').append($('<li>').text(decryptedMessage));
+						$('#messages').append($('<li>').text(data.username + ': ' + decryptedMessage));
 					},
 					error: function (err) {
 						console.error('Decryption error:', err);
