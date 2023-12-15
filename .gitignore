@@ -61,7 +61,6 @@ yarn-error.log*
 
 # local env files
 .env*.local
-users.db
 
 # vercel
 .vercel
